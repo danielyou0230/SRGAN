@@ -4,13 +4,22 @@ This project aims to implement SRGAN based on the Christian Ledig et al's "Photo
 
 In this project, we might incorporate the contents in Martin Arjovsky et al's "Wasserstein GAN" (See: https://arxiv.org/abs/1701.07875) and Huikai Wu el al's "GP-GAN_Towards Realistic High-Resolution Image Blending" (See: https://arxiv.org/abs/1703.07195) to achieve better performance or so.  
 
-## Current Progress
+## Current Progress  
+Implementing VGG19  
 
+## Project Roadmap  
+1. Implement VGG19  
+2. Verify VGG19  
+3. Implement SRGAN  
+4. Verify SRGAN  
+5. Train VGG19  
+6. Train SRGAN  
+7. Evaluate performance on SRGAN  
 
-## Project Roadmap
+## Issues  
+\#1. How to train VGG19 with Super-Resolution purpose?  
 
-
-## Reference
+## References
 Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network  
 Christian Ledig et al  
 https://arxiv.org/abs/1609.04802  
@@ -26,4 +35,7 @@ https://arxiv.org/abs/1703.07195
 How to Train Your DRAGAN  
 Naveen Kodali, Jacob Abernethy, James Hays, Zsolt Kira  
 https://arxiv.org/abs/1705.07215  
-  
+
+Deep Residual Learning for Image Recognition  
+Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun  
+https://arxiv.org/abs/1512.03385  
