@@ -1,14 +1,10 @@
-"""
-Know more, visit our github
-
-"""
 import tensorflow as tf
 import tensorlayer as tl
 import numpy as np
 
 BATCH_SIZE = 64
-LR_G = 0.0001           # learning rate for generator
-LR_D = 0.0001           # learning rate for discriminator
+LR_G = 0.0001 
+LR_D = 0.0001 
 
 class gan:
 	n_filter=[64, 128, 256, 512, 512]
@@ -32,13 +28,13 @@ class gan:
 			ema_apply_op = ema.apply([fc_mean, fc_var])
 			with tf.control_dependencies([ema_apply_op]):
 				return tf.identity(fc_mean), tf.identity(fc_var)
-		mean, var = tf.cond(is_training,    # is_training 的值是 True/False
-                    mean_var_with_update,   # 如果是 True, 更新 mean/var
-                    lambda: (               # 如果是 False, 返回之前 fc_mean/fc_var 的Moving Average
-                        ema.average(fc_mean), 
-                        ema.average(fc_var)
-                        )    
-                    )
+		mean, var = tf.cond(is_training,    
+					mean_var_with_update,   
+					lambda: (               
+						ema.average(fc_mean), 
+						ema.average(fc_var)
+						)    
+					)
 
 		x = tf.nn.BN(x, mean, var, shift, scale, epsilon)
 		return x

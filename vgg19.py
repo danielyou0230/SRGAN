@@ -10,16 +10,16 @@ class vgg19:
 		super(vgg19, self).__init__()
 		self.arg = arg
 		
-	def build(self):
+	def build(self, input_x, is_training=None):
 		with name_scope('block_1') as scope:
 			# 2 conv + 1 maxpool
 			conv1_1 = tf.layers.conv2d(
-					  inputs=x,
+					  inputs=input_x,
 					  filters=self.n_filter[0],
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv1_1' )
+					  name='conv1_1' )
 
 			conv1_2 = tf.layers.conv2d(
 					  inputs=conv1_1,
@@ -27,13 +27,13 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv1_2' )
+					  name='conv1_2' )
 		
 			pool1   = tf.layers.max_pooling2d(
 					  inputs=conv1_2, 
 					  pool_size=[2, 2], 
 					  strides=2, 
-					  name=scope + '/pool1')
+					  name='pool1')
 		
 		with name_scope('block_2') as scope:
 			# 2 conv + 1 maxpool
@@ -43,7 +43,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv2_1' )
+					  name='conv2_1' )
 
 			conv2_2 = tf.layers.conv2d(
 					  inputs=conv2_1,
@@ -51,13 +51,13 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv2_2' )
+					  name='conv2_2' )
 			
 			pool2   = tf.layers.max_pooling2d(
 					  inputs=conv2_2, 
 					  pool_size=[2, 2], 
 					  strides=2, 
-					  name=scope + '/pool2')
+					  name='pool2')
 		
 		with name_scope('block_3') as scope:
 			# 4 conv + 1 maxpool
@@ -67,7 +67,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv3_1' )
+					  name='conv3_1' )
 			
 			conv3_2 = tf.layers.conv2d(
 					  inputs=conv3_1,
@@ -75,7 +75,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv3_2' )
+					  name='conv3_2' )
 			
 			conv3_3 = tf.layers.conv2d(
 					  inputs=conv3_2,
@@ -83,7 +83,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv3_3' )
+					  name='conv3_3' )
 			
 			conv3_4 = tf.layers.conv2d(
 					  inputs=conv3_3,
@@ -91,13 +91,13 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv3_4' )
+					  name='conv3_4' )
 			
 			pool3   = tf.layers.max_pooling2d(
 					  inputs=conv3_4, 
 					  pool_size=[2, 2], 
 					  strides=2, 
-					  name=scope + '/pool3')
+					  name='pool3')
 
 		with name_scope('block_4') as scope:
 			# 4 conv + 1 maxpool
@@ -107,7 +107,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv4_1' )
+					  name='conv4_1' )
 			
 			conv4_2 = tf.layers.conv2d(
 					  inputs=conv4_1,
@@ -115,7 +115,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv4_2' )
+					  name='conv4_2' )
 			
 			conv4_3 = tf.layers.conv2d(
 					  inputs=conv4_2,
@@ -123,7 +123,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv4_3' )
+					  name='conv4_3' )
 			
 			conv4_4 = tf.layers.conv2d(
 					  inputs=conv4_3,
@@ -131,13 +131,13 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv4_4' )
+					  name='conv4_4' )
 			
 			pool4   = tf.layers.max_pooling2d(
 					  inputs=conv4_4, 
 					  pool_size=[2, 2], 
 					  strides=2, 
-					  name=scope + '/pool4')
+					  name='pool4')
 
 		with name_scope('block_5') as scope:
 			# 4 conv + 1 maxpool
@@ -147,7 +147,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv5_1' )
+					  name='conv5_1' )
 			
 			conv5_2 = tf.layers.conv2d(
 					  inputs=conv5_1,
@@ -155,7 +155,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv5_2' )
+					  name='conv5_2' )
 			
 			conv5_3 = tf.layers.conv2d(
 					  inputs=conv5_2,
@@ -163,7 +163,7 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv5_3' )
+					  name='conv5_3' )
 			
 			conv5_4 = tf.layers.conv2d(
 					  inputs=conv5_3,
@@ -171,33 +171,42 @@ class vgg19:
 					  kernel_size=[3, 3],
 					  padding="same",
 					  activation=tf.nn.relu,
-					  name=scope + '/conv5_4' )
+					  name='conv5_4' )
 			
 			pool5   = tf.layers.max_pooling2d(
 					  inputs=conv5_4, 
 					  pool_size=[2, 2], 
 					  strides=2, 
-					  name=scope + '/pool5' )
+					  name='pool5' )
 
 		with name_scope('fully_connected') as scope:
 			#flatten = tf.contrib.layers.flatten(pool5)
 			fc1 = tf.contrib.layers.fully_connected(
 				  inputs=pool5,
 				  num_outputs=4096,
-				  activation_fn=tf.nn.relu,
-				  normalizer_fn='batch_norm' )
-			fc1 = tf.nn.dropout(fc1, self.dropout)
+				  activation_fn=tf.nn.relu )
+			fc1 = tf.layers.batch_normalization(
+				  fc1,
+				  axis=-1,
+				  momentum=0.99,
+				  epsilon=0.001,
+				  training=is_training,
+				  name='fc1_bn',
+				  renorm=False,
+				  renorm_clipping=None,
+				  renorm_momentum=0.99)
+			#fc1 = tf.nn.dropout(fc1, self.dropout)
 			#
 			fc2 = tf.contrib.layers.fully_connected(
 				  inputs=pool5,
 				  num_outputs=4096,
-				  activation_fn=tf.nn.relu,
-				  normalizer_fn='batch_norm' )
-			fc2 = tf.nn.dropout(fc2, self.dropout)
+				  activation_fn=tf.nn.relu )
+			fc2 = tf.layers.batch_normalization()
+			#fc2 = tf.nn.dropout(fc2, self.dropout)
 			#
-			pred = tf.contrib.layers.fully_connected(
+			fc3 = tf.contrib.layers.fully_connected(
 				   inputs=pool5,
 				   num_outputs=1000,
-				   activation_fn=tf.nn.softmax,
-				   normalizer_fn='batch_norm' )
+				   activation_fn=tf.nn.softmax )
+			fc3 = tf.layers.batch_normalization()
 
