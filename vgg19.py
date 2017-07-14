@@ -7,12 +7,12 @@ class vgg19:
 	b_dropout = False
 	dropout = 0.8
 	#
-	def __init__(self, input_x, target, is_training, n_class):
+	def __init__(self, input_x, target, n_class, is_training):
 		# Currently fixed phi to phi(5, 4) [to be generalized]
 		self.pred, self.phi = self.build_model(input_x, is_training)
 		self.loss = self.inference_loss(self.pred, target, n_class)
 	#
-	def build(self, input_x, is_training=None):
+	def build_model(self, input_x, is_training=None):
 		with tf.variable_scope('vgg19', reuse=reuse):
 			phi = list()
 			with tf.variable_scope('block_1'):
