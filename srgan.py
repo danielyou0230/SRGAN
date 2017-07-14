@@ -418,8 +418,50 @@ class gan:
 					padding="same",
 					name='conv_gb3' )
 
-	def inference_loss(self, out, t):
-		cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-			labels=tf.one_hot(t, 100),
-			logits=out)
-		return tf.reduce_mean(cross_entropy)
+	def inference_losses(self, inputs, imitation, true_output, fake_output):
+		def inference_content_loss(x, imitation):
+			_, inputs_phi = self.vgg.build_model(
+				inputs, tf.constant(False), False) # First
+			_, imitation_phi = self.vgg.build_model(
+				imitation, tf.constant(False), True) # Second
+
+			content_loss = None
+			for i in range(len(x_phi)):
+				l2_loss = tf.nn.l2_loss(x_phi[i] - imitation_phi[i])
+				if content_loss is None:
+					content_loss = l2_loss
+				else:
+					content_loss = content_loss + l2_loss
+			return tf.reduce_mean(content_loss)
+
+		def inference_adversarial_loss(real_output, fake_output):
+			alpha = 1e-5
+			g_loss = tf.reduce_mean(
+				tf.nn.l2_loss(fake_output - tf.ones_like(fake_output)))
+			d_loss_real = tf.reduce_mean(
+				tf.nn.l2_loss(real_output - tf.ones_like(true_output)))
+			d_loss_fake = tf.reduce_mean(
+				tf.nn.l2_loss(fake_output + tf.zeros_like(fake_output)))
+			d_loss = d_loss_real + d_loss_fake
+			return (g_loss * alpha, d_loss * alpha)
+
+		def inference_adversarial_loss_with_sigmoid(real_output, fake_output):
+			alpha = 1e-3
+			g_loss = tf.nn.sigmoid_cross_entropy_with_logits(
+				labels=tf.ones_like(fake_output),
+				logits=fake_output)
+			d_loss_real = tf.nn.sigmoid_cross_entropy_with_logits(
+				labels=tf.ones_like(real_output),
+				logits=real_output)
+			d_loss_fake = tf.nn.sigmoid_cross_entropy_with_logits(
+				labels=tf.zeros_like(fake_output),
+				logits=fake_output)
+			d_loss = d_loss_real + d_loss_fake
+			return (g_loss * alpha, d_loss * alpha)
+
+		content_loss = inference_content_loss(x, imitation)
+		generator_loss, discriminator_loss = (
+			inference_adversarial_loss(true_output, fake_output))
+		g_loss = content_loss + generator_loss
+		d_loss = discriminator_loss
+		return (g_loss, d_loss)
