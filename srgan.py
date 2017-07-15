@@ -67,7 +67,7 @@ class srgan:
 		return bn2
 
 
-	def build(self, input_x, is_training, reuse=False):
+	def build(self, input_x,input_d, is_training, reuse=False):
 		with tf.variable_scope('generator', reuse=reuse):
 			with tf.variable_scope('ResBlock_0'):
 				conv_b0_1 = tf.layers.conv2d(
@@ -493,6 +493,110 @@ class srgan:
 							kernel_size=[9, 9],
 							padding="same",
 							name='conv_gb3' )
+
+
+
+
+		with tf.variable_scope('discriminator', reuse=reuse):
+			with tf.variable_scope('block0'):
+				conv0 = tf.layers.conv2d(
+							inputs=input_d,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							padding="same",
+							name='conv_0' )
+				b0_act = tf.contrib.keras.layers.LeakyReLU()
+				b0_act.input(conv_0)
+
+			with tf.variable_scope('block1'):
+				conv1 = tf.layers.conv2d(
+							inputs=b0_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv1' )
+				bn1 = tf.layers.batch_normalization(conv1, training=is_training)
+				b1_act = tf.contrib.keras.layers.LeakyReLU()
+				b1_act.input(bn1)
+
+			with tf.variable_scope('block2'):
+				conv2 = tf.layers.conv2d(
+							inputs=b1_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv2' )
+				bn2 = tf.layers.batch_normalization(conv2, training=is_training)
+				b2_act = tf.contrib.keras.layers.LeakyReLU()
+				b2_act.input(bn2)
+
+			with tf.variable_scope('block3'):
+				conv3 = tf.layers.conv2d(
+							inputs=b2_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv3' )
+				bn3 = tf.layers.batch_normalization(conv3, training=is_training)
+				b3_act = tf.contrib.keras.layers.LeakyReLU()
+				b3_act.input(bn3)
+
+			with tf.variable_scope('block4'):
+				conv4 = tf.layers.conv2d(
+							inputs=b3_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv4' )
+				bn4 = tf.layers.batch_normalization(conv4, training=is_training)
+				b4_act = tf.contrib.keras.layers.LeakyReLU()
+				b4_act.input(bn4)
+
+			with tf.variable_scope('block5'):
+				conv5 = tf.layers.conv2d(
+							inputs=b4_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv5' )
+				bn5 = tf.layers.batch_normalization(conv5, training=is_training)
+				b5_act = tf.contrib.keras.layers.LeakyReLU()
+				b5_act.input(bn5)
+
+			with tf.variable_scope('block6'):
+				conv6 = tf.layers.conv2d(
+							inputs=b5_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv6' )
+				bn6 = tf.layers.batch_normalization(conv6, training=is_training)
+				b6_act = tf.contrib.keras.layers.LeakyReLU()
+				b6_act.input(bn6)
+
+			with tf.variable_scope('block7'):
+				conv7 = tf.layers.conv2d(
+							inputs=b6_act,
+							filters=self.n_filter[0],
+							kernel_size=[3, 3],
+							strides=(2, 2),
+							padding="same",
+							name='conv7' )
+				bn7 = tf.layers.batch_normalization(conv7, training=is_training)
+				b7_act = tf.contrib.keras.layers.LeakyReLU()
+				b7_act.input(bn7)
+
+			with tf.variable_scope('block8'):
+				#Dense(1024) LeakyRelu Dense(1) sigmoid
+
+
+
 
 	def inference_losses(self, inputs, imitation, true_output, fake_output):
 		def inference_content_loss(input_x, imitation):
