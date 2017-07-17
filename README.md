@@ -19,6 +19,7 @@ Implementing SRGAN (revising loss function from https://github.com/tadax/srgan )
 
 ## Issues  
 \#1. How to train VGG19 with Super-Resolution purpose?  
+\#2. Implementation on training SRGAN  
 
 ## References
 Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network  
