@@ -40,11 +40,11 @@ class srgan:
 		input_x = tf.nn.BN(input_x, mean, var, shift, scale, epsilon)
 		return input_x
 """
-	def residual_block(self, input_x, index, out_size, is_training=True):
+	def residual_block(self, input_x, index, is_training=True):
 		with tf.variable_scope("ResBlock_" + str(index)) as scope:
 			conv1 = tf.layers.conv2d(
 						inputs=input_x,
-						filters=self.n_filter[0],
+						filters=self.n_filter[index],
 						kernel_size=[3, 3],
 						padding="same",
 						name='conv1' )
@@ -55,7 +55,7 @@ class srgan:
 
 			conv2 = tf.layers.conv2d(
 						inputs=act_prelu,
-						filters=self.n_filter[0],
+						filters=self.n_filter[index],
 						kernel_size=[3, 3],
 						padding="same",
 						name='conv2' )
