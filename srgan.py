@@ -1,18 +1,25 @@
 import tensorflow as tf
-import tensorlayer as tl
 import numpy as np
+from tensorlayer.layers import SubpixelConv2d
+from PIL import Image
+from vgg19 import vgg19
 
 BATCH_SIZE = 64
 LR_G = 0.0001 
 LR_D = 0.0001 
 
 class srgan:
-	n_filter=[64, 128, 256, 512, 512]
-	epsilon=0.001
-	def __init__(self, input_x, t, is_training):
-		if input_x is None: return
-		self.out, self.phi = self.build_model(input_x, is_training)
-		self.loss = self.inference_losses(self.out, t)
+	n_filter = [64, 128, 256, 512, 512]
+	epsilon  = 0.001
+	sr_rate = 4
+	def __init__(self, input_x, is_training):
+		self.vgg = vgg19(None, None, None)
+		self.downscaled = self.downscale(input_x)
+		self.imitation = self.generator(self.downscaled, is_training, False)
+		self.real_output = self.discriminator(input_x, is_training, False)
+		self.fake_output = self.discriminator(self.imitation, is_training, True)
+		self.g_loss, self.d_loss = self.inference_losses(
+			input_x, self.imitation, self.real_output, self.fake_output)
 """
 	def BN(self,input_x,out_size,epsilon,is_training):
 		fc_mean, fc_var = tf.nn.moments(
@@ -46,7 +53,7 @@ class srgan:
 						inputs=input_x,
 						filters=self.n_filter[index],
 						kernel_size=[3, 3],
-						padding="same",
+						padding="SAME",
 						name='conv1' )
 
 			conv1 = tf.layers.batch_normalization(conv1, training=is_training)
@@ -57,7 +64,7 @@ class srgan:
 						inputs=act_prelu,
 						filters=self.n_filter[index],
 						kernel_size=[3, 3],
-						padding="same",
+						padding="SAME",
 						name='conv2' )
 			conv2 = tf.layers.batch_normalization(conv2, training=is_training)
 			res   = tf.add(input_x, conv2, name="elementwise_sum")
@@ -71,7 +78,7 @@ class srgan:
 								inputs=input_x,
 								filters=self.n_filter[0],
 								kernel_size=[9 , 9],
-								padding="same",
+								padding="SAME",
 								name='conv01' )
 
 				act_0 = tf.contrib.keras.layers.PReLU()
@@ -82,7 +89,7 @@ class srgan:
 								inputs=act_0,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv01_1' )
 
 				conv01_1 = tf.layers.batch_normalization(
@@ -97,7 +104,7 @@ class srgan:
 								inputs=act_01,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv01_2' )
 				
 				conv01_2 = tf.layers.batch_normalization(
@@ -111,7 +118,7 @@ class srgan:
 								inputs=ressum01,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv02_1' )
 				
 				conv02_1 = tf.layers.batch_normalization(
@@ -126,7 +133,7 @@ class srgan:
 								sinputs=act_02,
 								sfilters=self.n_filter[0],
 								skernel_size=[3, 3],
-								spadding="same",
+								spadding="SAME",
 								sname='conv02_2' )
 				
 				conv02_2 = tf.layers.batch_normalization(
@@ -140,7 +147,7 @@ class srgan:
 								inputs=ressum02,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv03_1' )
 				
 				conv03_1 = tf.layers.batch_normalization(
@@ -155,7 +162,7 @@ class srgan:
 								inputs=act_03,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv03_2' )
 				
 				conv03_2 = tf.layers.batch_normalization(
@@ -169,7 +176,7 @@ class srgan:
 								inputs=ressum03,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv04_1' )
 				
 				conv04_1 = tf.layers.batch_normalization(
@@ -184,7 +191,7 @@ class srgan:
 								inputs=act_04,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv04_2' )
 				
 				conv04_2 = tf.layers.batch_normalization(
@@ -198,7 +205,7 @@ class srgan:
 								inputs=ressum04,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv05_1' )
 				
 				conv05_1 = tf.layers.batch_normalization(
@@ -211,7 +218,7 @@ class srgan:
 								inputs=act_05,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv05_2' )
 				
 				conv05_2 = tf.layers.batch_normalization(
@@ -225,7 +232,7 @@ class srgan:
 								inputs=ressum05,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv06_1' )
 				
 				conv06_1 = tf.layers.batch_normalization(
@@ -240,7 +247,7 @@ class srgan:
 								inputs=act_06,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv06_2' )
 				
 				conv06_2 = tf.layers.batch_normalization(
@@ -254,7 +261,7 @@ class srgan:
 								inputs=ressum06,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv07_1' )
 				
 				conv07_1 = tf.layers.batch_normalization(
@@ -269,7 +276,7 @@ class srgan:
 								inputs=act_07,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv07_2' )
 				
 				conv07_2 = tf.layers.batch_normalization(
@@ -283,7 +290,7 @@ class srgan:
 								inputs=ressum07,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv08_1' )
 				
 				conv08_1 = tf.layers.batch_normalization(
@@ -298,7 +305,7 @@ class srgan:
 								inputs=act_08,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv08_2' )
 				
 				conv08_2 = tf.layers.batch_normalization(
@@ -312,7 +319,7 @@ class srgan:
 								inputs=ressum08,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv09_1' )
 				
 				conv09_1 = tf.layers.batch_normalization(
@@ -327,7 +334,7 @@ class srgan:
 								inputs=act_09,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv09_2' )
 				
 				conv09_2 = tf.layers.batch_normalization(
@@ -341,7 +348,7 @@ class srgan:
 								inputs=ressum09,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv10_1' )
 				
 				conv10_1 = tf.layers.batch_normalization(
@@ -356,7 +363,7 @@ class srgan:
 								inputs=act_10,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv10_2' )
 				
 				conv10_2 = tf.layers.batch_normalization(
@@ -370,7 +377,7 @@ class srgan:
 								inputs=ressum10,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv11_1' )
 				
 				conv11_1 = tf.layers.batch_normalization(
@@ -385,7 +392,7 @@ class srgan:
 								inputs=act_11,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv11_2' )
 				
 				conv11_2 = tf.layers.batch_normalization(
@@ -399,7 +406,7 @@ class srgan:
 								inputs=ressum11,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv12_1' )
 				conv12_1 = tf.layers.batch_normalization(
 								conv12_1, 
@@ -413,7 +420,7 @@ class srgan:
 								inputs=act_12,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv12_2' )
 				
 				conv12_2 = tf.layers.batch_normalization(
@@ -427,7 +434,7 @@ class srgan:
 								inputs=ressum12,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv13_1' )
 				
 				conv13_1 = tf.layers.batch_normalization(
@@ -442,7 +449,7 @@ class srgan:
 								inputs=act_13,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv13_2' )
 				
 				conv13_2 = tf.layers.batch_normalization(
@@ -456,7 +463,7 @@ class srgan:
 								inputs=ressum13,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv14_1' )
 				conv14_1 = tf.layers.batch_normalization(
 								conv14_1, 
@@ -469,7 +476,7 @@ class srgan:
 								inputs=act_14,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv14_2' )
 				conv14_2 = tf.layers.batch_normalization(
 								conv14_2, 
@@ -482,7 +489,7 @@ class srgan:
 								inputs=ressum14,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv15_1' )
 				conv15_1 = tf.layers.batch_normalization(
 								conv15_1, 
@@ -495,7 +502,7 @@ class srgan:
 								inputs=act_15,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv15_2' )
 				conv15_2 = tf.layers.batch_normalization(
 								conv15_2, 
@@ -508,7 +515,7 @@ class srgan:
 								inputs=ressum15,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv16_1' )
 				
 				conv16_1 = tf.layers.batch_normalization(
@@ -523,7 +530,7 @@ class srgan:
 								inputs=act_16,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv16_2' )
 				
 				conv16_2 = tf.layers.batch_normalization(
@@ -537,7 +544,7 @@ class srgan:
 								inputs=ressum16,
 								filters=self.n_filter[0],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv_gB1' )
 				
 				conv_gB1 = tf.layers.batch_normalization(
@@ -551,7 +558,7 @@ class srgan:
 								inputs=ressum_gB1,
 								filters=self.n_filter[2],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv_gB2' )
 				
 				conv_gB2 = SubpixelConv2d(
@@ -569,7 +576,7 @@ class srgan:
 								inputs=act_gB2,
 								filters=self.n_filter[2],
 								kernel_size=[3, 3],
-								padding="same",
+								padding="SAME",
 								name='conv_gB3' )
 				
 				conv_gB3 = SubpixelConv2d(
@@ -587,7 +594,7 @@ class srgan:
 								inputs=act_gB3,
 								filters=3,
 								kernel_size=[9, 9],
-								padding="same",
+								padding="SAME",
 								name='conv' )
 
 		return conv
@@ -601,7 +608,7 @@ class srgan:
 							filters=self.n_filter[0],
 							kernel_size=[3, 3],
 							strides=(1, 1),
-							padding="same",
+							padding="SAME",
 							name='conv0' )
 				b0act = tf.contrib.keras.layers.LeakyReLU()
 				b0act.input(conv0)
@@ -612,7 +619,7 @@ class srgan:
 							filters=self.n_filter[0],
 							kernel_size=[3, 3],
 							strides=(2, 2),
-							padding="same",
+							padding="SAME",
 							name='conv1' )
 				conv1 = tf.layers.batch_normalization(
 							conv1, 
@@ -627,7 +634,7 @@ class srgan:
 							filters=self.n_filter[1],
 							kernel_size=[3, 3],
 							strides=(1, 1),
-							padding="same",
+							padding="SAME",
 							name='conv2' )
 				conv2 = tf.layers.batch_normalization(
 							conv2, 
@@ -642,7 +649,7 @@ class srgan:
 							filters=self.n_filter[1],
 							kernel_size=[3, 3],
 							strides=(2, 2),
-							padding="same",
+							padding="SAME",
 							name='conv3' )
 				conv3 = tf.layers.batch_normalization(
 							conv3, 
@@ -657,7 +664,7 @@ class srgan:
 							filters=self.n_filter[2],
 							kernel_size=[3, 3],
 							strides=(1, 1),
-							padding="same",
+							padding="SAME",
 							name='conv4' )
 				conv4 = tf.layers.batch_normalization(
 							conv4, 
@@ -672,7 +679,7 @@ class srgan:
 							filters=self.n_filter[2],
 							kernel_size=[3, 3],
 							strides=(2, 2),
-							padding="same",
+							padding="SAME",
 							name='conv5' )
 				conv5 = tf.layers.batch_normalization(
 							conv5, 
@@ -687,7 +694,7 @@ class srgan:
 							filters=self.n_filter[3],
 							kernel_size=[3, 3],
 							strides=(1, 1),
-							padding="same",
+							padding="SAME",
 							name='conv6' )
 				conv6 = tf.layers.batch_normalization(
 							conv6, 
@@ -702,7 +709,7 @@ class srgan:
 							filters=self.n_filter[3],
 							kernel_size=[3, 3],
 							strides=(2, 2),
-							padding="same",
+							padding="SAME",
 							name='conv7' )
 				conv7 = tf.layers.batch_normalization(
 							conv7, 
@@ -724,6 +731,19 @@ class srgan:
 				fc2 = tf.sigmoid(x=fc2, name='output_actfcn')
 
 		return fc2
+
+	def downscale(self, input_x):
+		arr = np.zeros([self.sr_rate, self.sr_rate, 3, 3])
+		arr[:, :, 0, 0] = 1.0 / self.sr_rate ** 2
+		arr[:, :, 1, 1] = 1.0 / self.sr_rate ** 2
+		arr[:, :, 2, 2] = 1.0 / self.sr_rate ** 2
+		weight = tf.constant(arr, dtype=tf.float32)
+		downscaled = tf.nn.conv2d(
+						input=input_x, 
+						filter=weight, 
+						strides=[1, self.sr_rate, self.sr_rate, 1], 
+						padding="SAME" )
+		return downscaled
 
 	def inference_losses(self, inputs, imitation, true_output, fake_output):
 		def inference_content_loss(input_x, imitation):
