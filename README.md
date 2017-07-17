@@ -5,7 +5,8 @@ This project aims to implement SRGAN based on the Christian Ledig et al's "Photo
 In this project, we might incorporate the contents in Martin Arjovsky et al's "Wasserstein GAN" (See: https://arxiv.org/abs/1701.07875) and Huikai Wu el al's "GP-GAN_Towards Realistic High-Resolution Image Blending" (See: https://arxiv.org/abs/1703.07195) to achieve better performance or so.  
 
 ## Current Progress  
-Implementing VGG19  
+Implementing VGG19 (pending for verification)  
+Implementing SRGAN (revising loss function from https://github.com/tadax/srgan )  
 
 ## Project Roadmap  
 1. Implement VGG19  

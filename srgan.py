@@ -12,13 +12,14 @@ class srgan:
 	def __init__(self, input_x, t, is_training):
 		if input_x is None: return
 		self.out, self.phi = self.build_model(input_x, is_training)
-		self.loss = self.inference_loss(self.out, t)
+		self.loss = self.inference_losses(self.out, t)
 """
 	def BN(self,input_x,out_size,epsilon,is_training):
 		fc_mean, fc_var = tf.nn.moments(
 		input_x,
 		axes=[0,1,2],   # the dimension you wanna normalize, here [0] for batch
-					# for image, you wanna do [0, 1, 2] for [batch, height, width] but not channel
+		# for image, you wanna do [0, 1, 2] 
+		# for [batch, height, width] but not channel
 		)
 		scale = tf.Variable(tf.ones([out_size]))
 		shift = tf.Variable(tf.zeros([out_size]))
@@ -40,563 +41,689 @@ class srgan:
 		return input_x
 """
 	def residual_block(self, input_x, index, out_size, is_training=True):
-		with tf.variable_scope("block_" + str(index)) as scope:
+		with tf.variable_scope("ResBlock_" + str(index)) as scope:
 			conv1 = tf.layers.conv2d(
-					inputs=input_x,
-					filters=self.n_filter[0],
-					kernel_size=[3, 3],
-					padding="same",
-					name='conv1' )
+						inputs=input_x,
+						filters=self.n_filter[0],
+						kernel_size=[3, 3],
+						padding="same",
+						name='conv1' )
 
-			bn   = tf.layers.batch_normalization(conv1, training=is_training)
-
+			conv1 = tf.layers.batch_normalization(conv1, training=is_training)
 			act_prelu = tf.contrib.keras.layers.PReLU()
-			act_prelu.input(bn)
-			
+			act_prelu.input(conv1)
+
 			conv2 = tf.layers.conv2d(
-					inputs=act_prelu,
-					filters=self.n_filter[0],
-					kernel_size=[3, 3],
-					padding="same",
-					name='conv2' )
+						inputs=act_prelu,
+						filters=self.n_filter[0],
+						kernel_size=[3, 3],
+						padding="same",
+						name='conv2' )
+			conv2 = tf.layers.batch_normalization(conv2, training=is_training)
+			res   = tf.add(input_x, conv2, name="elementwise_sum")
+		return res
 
-			bn2 = tf.layers.batch_normalization(conv2, training=is_training)
-
-			tf.add(input_x, bn2, name="elementwise_sum")
-		
-		return bn2
-
-
-	def build(self, input_x,input_d, is_training, reuse=False):
+	def generator(self, input_x, is_training, reuse=False):
+		# Generator
 		with tf.variable_scope('generator', reuse=reuse):
-			with tf.variable_scope('ResBlock_0'):
-				conv_b0_1 = tf.layers.conv2d(
-					inputs=input_x,
-					filters=self.n_filter[0],
-					kernel_size=[9 , 9],
-					padding="same",
-					name='conv1' )
+			with tf.variable_scope('iniBlock'):
+				conv0 = tf.layers.conv2d(
+								inputs=input_x,
+								filters=self.n_filter[0],
+								kernel_size=[9 , 9],
+								padding="same",
+								name='conv01' )
 
-				act_prelu_b0 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b0.input(conv1)
+				act_0 = tf.contrib.keras.layers.PReLU()
+				act_0.input(conv0)
 
-			with tf.variable_scope("ResBlock_1"):
-				conv_b1_1 = tf.layers.conv2d(
-							inputs=act_prelu_b0,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b1_1' )
+			with tf.variable_scope("ResBlock_01"):
+				conv01_1 = tf.layers.conv2d(
+								inputs=act_0,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv01_1' )
 
-				bn1_1 = tf.layers.batch_normalization(conv_b1_1, training=is_training)
+				conv01_1 = tf.layers.batch_normalization(
+								conv01_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b1 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b1.input(bn1_1)
+				act_01 = tf.contrib.keras.layers.PReLU()
+				act_01.input(conv01_1)
 				
-				conv_b1_2 = tf.layers.conv2d(
-						  inputs=act_prelu_b1,
-						  filters=self.n_filter[0],
-						  kernel_size=[3, 3],
-						  padding="same",
-						  name='conv_b1_2' )
+				conv01_2 = tf.layers.conv2d(
+								inputs=act_01,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv01_2' )
 				
-				bn1_2 = tf.layers.batch_normalization(conv_b1_2, training=is_training)
-				ressum_1 = tf.add(act_prelu_b0, bn1_2, name="ResSum")
+				conv01_2 = tf.layers.batch_normalization(
+								conv01_2, 
+								axis=-1,
+								training=is_training )
+				ressum01 = tf.add(act_00, conv01_2, name="ResSum01")
 
-			with tf.variable_scope("ResBlock_2"):
-				conv_b2_1 = tf.layers.conv2d(
-					inputs=ressum_1,
-					filters=self.n_filter[0],
-					kernel_size=[3, 3],
-					padding="same",
-					name='conv_b2_1' )
+			with tf.variable_scope("ResBlock_02"):
+				conv02_1 = tf.layers.conv2d(
+								inputs=ressum01,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv02_1' )
 				
-				bn2_1 = tf.layers.batch_normalization(conv_b2_1, training=is_training)
+				conv02_1 = tf.layers.batch_normalization(
+								conv02_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b2 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b2.input(bn2_1)
+				act_02 = tf.contrib.keras.layers.PReLU()
+				act_02.input(conv02_1)
 				
-				conv_b2_2 = tf.layers.conv2d(
-					inputs=act_prelu_b2,
-					filters=self.n_filter[0],
-					kernel_size=[3, 3],
-					padding="same",
-					name='conv_b2_2' )
+				conv02_2 = tf.layers.conv2d(
+								sinputs=act_02,
+								sfilters=self.n_filter[0],
+								skernel_size=[3, 3],
+								spadding="same",
+								sname='conv02_2' )
 				
-				bn2_2 = tf.layers.batch_normalization(conv_b2_2, training=is_training)
-				ressum_2 = tf.add(ressum_1, bn2_2, name="ResSum")
+				conv02_2 = tf.layers.batch_normalization(
+								conv02_2, 
+								axis=-1,
+								training=is_training )
+				ressum02 = tf.add(ressum01, conv02_2, name="ResSum02")
 
-			with tf.variable_scope("ResBlock_3"):
-				conv_b3_1 = tf.layers.conv2d(
-					inputs=ressum_2,
-					filters=self.n_filter[0],
-					kernel_size=[3, 3],
-					padding="same",
-					name='conv_b3_1' )
+			with tf.variable_scope("ResBlock_03"):
+				conv03_1 = tf.layers.conv2d(
+								inputs=ressum02,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv03_1' )
 				
-				bn3_1 = tf.layers.batch_normalization(conv_b3_1, training=is_training)
+				conv03_1 = tf.layers.batch_normalization(
+								conv03_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b3 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b3.input(bn3_1)
+				act_03 = tf.contrib.keras.layers.PReLU()
+				act_03.input(conv03_1)
 
-				conv_b3_2 = tf.layers.conv2d(
-					inputs=act_prelu_b3,
-					filters=self.n_filter[0],
-					kernel_size=[3, 3],
-					padding="same",
-					name='conv_b3_2' )
+				conv03_2 = tf.layers.conv2d(
+								inputs=act_03,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv03_2' )
 				
-				bn3_2 = tf.layers.batch_normalization(conv_b3_2, training=is_training)
-				ressum_3 = tf.add(ressum_2, bn3_2, name="ResSum")
+				conv03_2 = tf.layers.batch_normalization(
+								conv03_2, 
+								axis=-1,
+								training=is_training )
+				ressum03 = tf.add(ressum02, conv03_2, name="ResSum03")
 
-			with tf.variable_scope("ResBlock_4"):
-				conv_b4_1 = tf.layers.conv2d(
-							inputs=ressum_3,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b4_1' )
+			with tf.variable_scope("ResBlock_04"):
+				conv04_1 = tf.layers.conv2d(
+								inputs=ressum03,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv04_1' )
 				
-				bn4_1 = tf.layers.batch_normalization(conv_b4_1, training=is_training)
+				conv04_1 = tf.layers.batch_normalization(
+								conv04_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b4 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b4.input(bn4_1)
+				act_04 = tf.contrib.keras.layers.PReLU()
+				act_04.input(conv04_1)
 				
-				conv_b4_2 = tf.layers.conv2d(
-							inputs=act_prelu_b4,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b4_2' )
+				conv04_2 = tf.layers.conv2d(
+								inputs=act_04,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv04_2' )
 				
-				bn4_2 = tf.layers.batch_normalization(conv_b4_2, training=is_training)
-				ressum_4 = tf.add(ressum_3, bn4_2, name="ResSum")
+				conv04_2 = tf.layers.batch_normalization(
+								conv04_2, 
+								axis=-1,
+								training=is_training )
+				ressum04 = tf.add(ressum03, conv04_2, name="ResSum04")
 
-			with tf.variable_scope("ResBlock_5"):
-				conv_b5_1 = tf.layers.conv2d(
-							inputs=ressum_4,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b5_1' )
+			with tf.variable_scope("ResBlock_05"):
+				conv05_1 = tf.layers.conv2d(
+								inputs=ressum04,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv05_1' )
 				
-				bn5_1 = tf.layers.batch_normalization(conv_b5_1, training=is_training)
+				conv05_1 = tf.layers.batch_normalization(
+								conv05_1, training=is_training)
 				
-				act_prelu_b5 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b5.input(bn5_1)
+				act_05 = tf.contrib.keras.layers.PReLU()
+				act_05.input(conv05_1)
 				
-				conv_b5_2 = tf.layers.conv2d(
-							inputs=act_prelu_b5,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b5_2' )
+				conv05_2 = tf.layers.conv2d(
+								inputs=act_05,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv05_2' )
 				
-				bn5_2 = tf.layers.batch_normalization(conv_b5_2, training=is_training)
-				ressum_5 = tf.add(ressum_4, bn5_2, name="ResSum")
+				conv05_2 = tf.layers.batch_normalization(
+								conv05_2, 
+								axis=-1,
+								training=is_training )
+				ressum05 = tf.add(ressum04, conv05_2, name="ResSum05")
 
-			with tf.variable_scope("ResBlock_6"):
-				conv_b6_1 = tf.layers.conv2d(
-							inputs=ressum_5,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b6_1' )
+			with tf.variable_scope("ResBlock_06"):
+				conv06_1 = tf.layers.conv2d(
+								inputs=ressum05,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv06_1' )
 				
-				bn6_1 = tf.layers.batch_normalization(conv_b6_1, training=is_training)
+				conv06_1 = tf.layers.batch_normalization(
+								conv06_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b6 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b6.input(bn6_1)
+				act_06 = tf.contrib.keras.layers.PReLU()
+				act_06.input(conv06_1)
 				
-				conv_b6_2 = tf.layers.conv2d(
-							inputs=act_prelu_b6,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b6_2' )
+				conv06_2 = tf.layers.conv2d(
+								inputs=act_06,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv06_2' )
 				
-				bn6_2 = tf.layers.batch_normalization(conv_b6_2, training=is_training)
-				ressum_6 = tf.add(ressum_5, bn6_2, name="ResSum")
+				conv06_2 = tf.layers.batch_normalization(
+								conv06_2, 
+								axis=-1,
+								training=is_training )
+				ressum06 = tf.add(ressum05, conv06_2, name="ResSum06")
 
-			with tf.variable_scope("ResBlock_7"):
-				conv_b7_1 = tf.layers.conv2d(
-							inputs=ressum_6,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b7_1' )
+			with tf.variable_scope("ResBlock_07"):
+				conv07_1 = tf.layers.conv2d(
+								inputs=ressum06,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv07_1' )
 				
-				bn7_1 = tf.layers.batch_normalization(conv_b7_1, training=is_training)
+				conv07_1 = tf.layers.batch_normalization(
+								conv07_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b7 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b7.input(bn7_1)
+				act_07 = tf.contrib.keras.layers.PReLU()
+				act_07.input(conv07_1)
 				
-				conv_b7_2 = tf.layers.conv2d(
-							inputs=act_prelu_b7,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b7_2' )
+				conv07_2 = tf.layers.conv2d(
+								inputs=act_07,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv07_2' )
 				
-				bn7_2 = tf.layers.batch_normalization(conv_b7_2, training=is_training)
-				ressum_7 = tf.add(ressum_6, bn7_2, name="ResSum")
+				conv07_2 = tf.layers.batch_normalization(
+								conv07_2, 
+								axis=-1,
+								training=is_training )
+				ressum07 = tf.add(ressum06, conv07_2, name="ResSum07")
 
-			with tf.variable_scope("ResBlock_8"):
-				conv_b8_1 = tf.layers.conv2d(
-							inputs=ressum_7,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b8_1' )
+			with tf.variable_scope("ResBlock_08"):
+				conv08_1 = tf.layers.conv2d(
+								inputs=ressum07,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv08_1' )
 				
-				bn8_1 = tf.layers.batch_normalization(conv_b8_1, training=is_training)
+				conv08_1 = tf.layers.batch_normalization(
+								conv08_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b8 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b8.input(bn8_1)
+				act_08 = tf.contrib.keras.layers.PReLU()
+				act_08.input(conv08_1)
 				
-				conv_b8_2 = tf.layers.conv2d(
-							inputs=act_prelu_b8,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b8_2' )
+				conv08_2 = tf.layers.conv2d(
+								inputs=act_08,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv08_2' )
 				
-				bn8_2 = tf.layers.batch_normalization(conv_b8_2, training=is_training)
-				ressum_8 = tf.add(ressum_7, bn8_2, name="ResSum")
+				conv08_2 = tf.layers.batch_normalization(
+								conv08_2, 
+								axis=-1,
+								training=is_training )
+				ressum08 = tf.add(ressum07, conv08_2, name="ResSum08")
 
-			with tf.variable_scope("ResBlock_9"):
-				conv_b9_1 = tf.layers.conv2d(
-							inputs=ressum_8,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b9_1' )
+			with tf.variable_scope("ResBlock_09"):
+				conv09_1 = tf.layers.conv2d(
+								inputs=ressum08,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv09_1' )
 				
-				bn9_1 = tf.layers.batch_normalization(conv_b9_1, training=is_training)
+				conv09_1 = tf.layers.batch_normalization(
+								conv09_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b9 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b9.input(bn9_1)
+				act_09 = tf.contrib.keras.layers.PReLU()
+				act_09.input(conv09_1)
 				
-				conv_b9_2 = tf.layers.conv2d(
-							inputs=act_prelu_b9,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_b9_2' )
+				conv09_2 = tf.layers.conv2d(
+								inputs=act_09,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv09_2' )
 				
-				bn9_2 = tf.layers.batch_normalization(conv_b9_2, training=is_training)
-				ressum_9 = tf.add(ressum_8, bn9_2, name="ResSum")
+				conv09_2 = tf.layers.batch_normalization(
+								conv09_2, 
+								axis=-1,
+								training=is_training )
+				ressum09 = tf.add(ressum08, conv09_2, name="ResSum09")
 
 			with tf.variable_scope("ResBlock_10"):
-				conv_b10_1 = tf.layers.conv2d(
-							 inputs=ressum_9,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b10_1' )
+				conv10_1 = tf.layers.conv2d(
+								inputs=ressum09,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv10_1' )
 				
-				bn10_1 = tf.layers.batch_normalization(conv_b10_1, training=is_training)
+				conv10_1 = tf.layers.batch_normalization(
+								conv10_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b10 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b10.input(bn10_1)
+				act_10 = tf.contrib.keras.layers.PReLU()
+				act_10.input(conv10_1)
 				
-				conv_b10_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b10,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b10_2' )
+				conv10_2 = tf.layers.conv2d(
+								inputs=act_10,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv10_2' )
 				
-				bn10_2 = tf.layers.batch_normalization(conv_b10_2, training=is_training)
-				ressum_10 = tf.add(ressum_9, bn10_2, name="ResSum")
+				conv10_2 = tf.layers.batch_normalization(
+								conv10_2, 
+								axis=-1,
+								training=is_training )
+				ressum10 = tf.add(ressum09, conv10_2, name="ResSum10")
 
 			with tf.variable_scope("ResBlock_11"):
-				conv_b11_1 = tf.layers.conv2d(
-							 inputs=ressum_10,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b11_1' )
+				conv11_1 = tf.layers.conv2d(
+								inputs=ressum10,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv11_1' )
 				
-				bn11_1 = tf.layers.batch_normalization(conv_b11_1, training=is_training)
+				conv11_1 = tf.layers.batch_normalization(
+								conv11_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b11 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b11.input(bn11_1)
+				act_11 = tf.contrib.keras.layers.PReLU()
+				act_11.input(conv11_1)
 				
-				conv_b11_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b11,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b11_2' )
+				conv11_2 = tf.layers.conv2d(
+								inputs=act_11,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv11_2' )
 				
-				bn11_2 = tf.layers.batch_normalization(conv_b11_2, training=is_training)
-				ressum_11 = tf.add(ressum_10, bn11_2, name="ResSum")
+				conv11_2 = tf.layers.batch_normalization(
+								conv11_2, 
+								axis=-1,
+								training=is_training )
+				ressum11 = tf.add(ressum10, conv11_2, name="ResSum11")
 
 			with tf.variable_scope("ResBlock_12"):
-				conv_b12_1 = tf.layers.conv2d(
-							 inputs=ressum_11,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b12_1' )
-				bn12_1 = tf.layers.batch_normalization(conv_b12_1, training=is_training)
+				conv12_1 = tf.layers.conv2d(
+								inputs=ressum11,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv12_1' )
+				conv12_1 = tf.layers.batch_normalization(
+								conv12_1, 
+								axis=-1,
+								training=is_training )
+
+				act_12 = tf.contrib.keras.layers.PReLU()
+				act_12.input(conv12_1)
 				
-				act_prelu_b12 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b12.input(bn12_1)
+				conv12_2 = tf.layers.conv2d(
+								inputs=act_12,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv12_2' )
 				
-				conv_b12_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b12,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b12_2' )
-				
-				bn12_2 = tf.layers.batch_normalization(conv_b12_2, training=is_training)
-				ressum_12 = tf.add(ressum_11, bn12_2, name="ResSum")
+				conv12_2 = tf.layers.batch_normalization(
+								conv12_2, 
+								axis=-1,
+								training=is_training )
+				ressum12 = tf.add(ressum11, conv12_2, name="ResSum12")
 
 			with tf.variable_scope("ResBlock_13"):
-				conv_b13_1 = tf.layers.conv2d(
-							 inputs=ressum_12,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b13_1' )
+				conv13_1 = tf.layers.conv2d(
+								inputs=ressum12,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv13_1' )
 				
-				bn13_1 = tf.layers.batch_normalization(conv_b13_1, training=is_training)
+				conv13_1 = tf.layers.batch_normalization(
+								conv13_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b13 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b13.input(bn13_1)
+				act_13 = tf.contrib.keras.layers.PReLU()
+				act_13.input(conv13_1)
 				
-				conv_b13_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b13,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b13_2' )
+				conv13_2 = tf.layers.conv2d(
+								inputs=act_13,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv13_2' )
 				
-				bn13_2 = tf.layers.batch_normalization(conv_b13_2, training=is_training)
-				ressum_13 = tf.add(ressum_12, bn13_2, name="ResSum")
+				conv13_2 = tf.layers.batch_normalization(
+								conv13_2, 
+								axis=-1,
+								training=is_training )
+				ressum13 = tf.add(ressum12, conv13_2, name="ResSum13")
 
 			with tf.variable_scope("ResBlock_14"):
-				conv_b14_1 = tf.layers.conv2d(
-							 inputs=ressum_13,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b14_1' )
-				bn14_1 = tf.layers.batch_normalization(conv_b14_1, training=is_training)
-				act_prelu_b14 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b14.input(bn14_1)
-				conv_b14_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b14,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b14_2' )
-				bn14_2 = tf.layers.batch_normalization(conv_b14_2, training=is_training)
-				ressum_14 = tf.add(ressum_13, bn14_2, name="ResSum")
+				conv14_1 = tf.layers.conv2d(
+								inputs=ressum13,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv14_1' )
+				conv14_1 = tf.layers.batch_normalization(
+								conv14_1, 
+								axis=-1,
+								training=is_training )
+				act_14 = tf.contrib.keras.layers.PReLU()
+				act_14.input(conv14_1)
+
+				conv14_2 = tf.layers.conv2d(
+								inputs=act_14,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv14_2' )
+				conv14_2 = tf.layers.batch_normalization(
+								conv14_2, 
+								axis=-1,
+								training=is_training )
+				ressum14 = tf.add(ressum13, conv14_2, name="ResSum14")
 
 			with tf.variable_scope("ResBlock_15"):
-				conv_b15_1 = tf.layers.conv2d(
-							 inputs=ressum_14,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b15_1' )
-				bn15_1 = tf.layers.batch_normalization(conv_b15_1, training=is_training)
-				act_prelu_b15 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b15.input(bn15_1)
-				conv_b15_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b15,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b15_2' )
-				bn15_2 = tf.layers.batch_normalization(conv_b15_2, training=is_training)
-				ressum_15 = tf.add(ressum_14, bn15_2, name="ResSum")
+				conv15_1 = tf.layers.conv2d(
+								inputs=ressum14,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv15_1' )
+				conv15_1 = tf.layers.batch_normalization(
+								conv15_1, 
+								axis=-1,
+								training=is_training )
+				act_15 = tf.contrib.keras.layers.PReLU()
+				act_15.input(conv15_1)
+
+				conv15_2 = tf.layers.conv2d(
+								inputs=act_15,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv15_2' )
+				conv15_2 = tf.layers.batch_normalization(
+								conv15_2, 
+								axis=-1,
+								training=is_training )
+				ressum15 = tf.add(ressum14, conv15_2, name="ResSum15")
 
 			with tf.variable_scope("ResBlock_16"):
-				conv_b16_1 = tf.layers.conv2d(
-							 inputs=ressum_15,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b16_1' )
+				conv16_1 = tf.layers.conv2d(
+								inputs=ressum15,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv16_1' )
 				
-				bn16_1 = tf.layers.batch_normalization(conv_b16_1, training=is_training)
+				conv16_1 = tf.layers.batch_normalization(
+								conv16_1, 
+								axis=-1,
+								training=is_training )
 				
-				act_prelu_b16 = tf.contrib.keras.layers.PReLU()
-				act_prelu_b16.input(bn16_1)
+				act_16 = tf.contrib.keras.layers.PReLU()
+				act_16.input(conv16_1)
 				
-				conv_b16_2 = tf.layers.conv2d(
-							 inputs=act_prelu_b16,
-							 filters=self.n_filter[0],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_b16_2' )
+				conv16_2 = tf.layers.conv2d(
+								inputs=act_16,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv16_2' )
 				
-				bn16_2 = tf.layers.batch_normalization(conv_b16_2, training=is_training)
-				ressum_16 = tf.add(ressum_15, bn16_2, name="ResSum")
+				conv16_2 = tf.layers.batch_normalization(
+								conv16_2, 
+								axis=-1,
+								training=is_training )
+				ressum16 = tf.add(ressum15, conv16_2, name="ResSum16")
 			#
-			with tf.variable_scope("gblock1"):
-				conv_gb_1 = tf.layers.conv2d(
-							inputs=ressum_16,
-							filters=self.n_filter[0],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_gb1' )
+			with tf.variable_scope("gBlock1"):
+				conv_gB1 = tf.layers.conv2d(
+								inputs=ressum16,
+								filters=self.n_filter[0],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv_gB1' )
 				
-				bn_gb1 = tf.layers.batch_normalization(conv_gb1_1, training=is_training)
-				ressum_gb1 = tf.add(act_prelu_b0, bn_gb1, name="ResSum")
+				conv_gB1 = tf.layers.batch_normalization(
+								conv_gB1, 
+								axis=-1,
+								training=is_training )
+				ressum_gB1 = tf.add(act_0, conv_gB1, name="ResSum")
 			#
-			with tf.variable_scope('gblock2'):
-				conv_gb_2 = tf.layers.conv2d(
-							 inputs=ressum_gb1,
-							 filters=self.n_filter[2],
-							 kernel_size=[3, 3],
-							 padding="same",
-							 name='conv_gb2' )
+			with tf.variable_scope('gBlock2'):
+				conv_gB2 = tf.layers.conv2d(
+								inputs=ressum_gB1,
+								filters=self.n_filter[2],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv_gB2' )
 				
-				px_shuffler_2 = SubpixelConv2d(
-								conv_gb_2, 
+				conv_gB2 = SubpixelConv2d(
+								conv_gB2, 
 								scale=2, 
 								n_out_channel=None, 
 								act=tf.nn.relu, 
 								name='pixelshufflerx2/1')
 
-				gb2_act = tf.contrib.keras.layers.PReLU()
-				gb2_act.input(px_shuffler_2)
+				act_gB2 = tf.contrib.keras.layers.PReLU()
+				act_gB2.input(conv_gB2)
 			#
-			with tf.variable_scope('gblock3'):
-				conv_gb_3 = tf.layers.conv2d(
-							inputs=gb2_act,
-							filters=self.n_filter[2],
-							kernel_size=[3, 3],
-							padding="same",
-							name='conv_gb3' )
+			with tf.variable_scope('gBlock3'):
+				conv_gB3 = tf.layers.conv2d(
+								inputs=act_gB2,
+								filters=self.n_filter[2],
+								kernel_size=[3, 3],
+								padding="same",
+								name='conv_gB3' )
 				
-				px_shuffler_3 = SubpixelConv2d(
-								conv_gb_3, 
+				conv_gB3 = SubpixelConv2d(
+								conv_gB3, 
 								scale=2, 
 								n_out_channel=None, 
 								act=tf.nn.relu, 
-								name='pixelshufflerx2/2')
+								name='PixelShufflerX2/2' )
 				
-				gb3_act = tf.contrib.keras.layers.PReLU()
-				gb3_act.input(px_shuffler_3)
+				act_gB3 = tf.contrib.keras.layers.PReLU()
+				act_gB3.input(conv_gB3)
 			#
-			with tf.variable_scope('gblock4'):
-				conv_gb_4 = tf.layers.conv2d(
-							inputs=gb3_act,
-							filters=3,
-							kernel_size=[9, 9],
-							padding="same",
-							name='conv_gb3' )
+			with tf.variable_scope('conv_final'):
+				conv = tf.layers.conv2d(
+								inputs=act_gB3,
+								filters=3,
+								kernel_size=[9, 9],
+								padding="same",
+								name='conv' )
 
+		return conv
 
-
-
+	def discriminator(self, input_x, is_training, reuse=False)
+		# Discriminator
 		with tf.variable_scope('discriminator', reuse=reuse):
-			with tf.variable_scope('block0'):
+			with tf.variable_scope('Block_0'):
 				conv0 = tf.layers.conv2d(
-							inputs=input_d,
+							inputs=input_x,
 							filters=self.n_filter[0],
 							kernel_size=[3, 3],
+							strides=(1, 1),
 							padding="same",
-							name='conv_0' )
-				b0_act = tf.contrib.keras.layers.LeakyReLU()
-				b0_act.input(conv_0)
+							name='conv0' )
+				b0act = tf.contrib.keras.layers.LeakyReLU()
+				b0act.input(conv0)
 
-			with tf.variable_scope('block1'):
+			with tf.variable_scope('Block_1'):
 				conv1 = tf.layers.conv2d(
-							inputs=b0_act,
+							inputs=b0act,
 							filters=self.n_filter[0],
 							kernel_size=[3, 3],
 							strides=(2, 2),
 							padding="same",
 							name='conv1' )
-				bn1 = tf.layers.batch_normalization(conv1, training=is_training)
-				b1_act = tf.contrib.keras.layers.LeakyReLU()
-				b1_act.input(bn1)
+				conv1 = tf.layers.batch_normalization(
+							conv1, 
+							axis=-1,
+							training=is_training )
+				b1act = tf.contrib.keras.layers.LeakyReLU()
+				b1act.input(conv1)
 
-			with tf.variable_scope('block2'):
+			with tf.variable_scope('Block_2'):
 				conv2 = tf.layers.conv2d(
-							inputs=b1_act,
-							filters=self.n_filter[0],
+							inputs=b1act,
+							filters=self.n_filter[1],
 							kernel_size=[3, 3],
-							strides=(2, 2),
+							strides=(1, 1),
 							padding="same",
 							name='conv2' )
-				bn2 = tf.layers.batch_normalization(conv2, training=is_training)
-				b2_act = tf.contrib.keras.layers.LeakyReLU()
-				b2_act.input(bn2)
+				conv2 = tf.layers.batch_normalization(
+							conv2, 
+							axis=-1,
+							training=is_training )
+				b2act = tf.contrib.keras.layers.LeakyReLU()
+				b2act.input(conv2)
 
-			with tf.variable_scope('block3'):
+			with tf.variable_scope('Block_3'):
 				conv3 = tf.layers.conv2d(
-							inputs=b2_act,
-							filters=self.n_filter[0],
+							inputs=b2act,
+							filters=self.n_filter[1],
 							kernel_size=[3, 3],
 							strides=(2, 2),
 							padding="same",
 							name='conv3' )
-				bn3 = tf.layers.batch_normalization(conv3, training=is_training)
-				b3_act = tf.contrib.keras.layers.LeakyReLU()
-				b3_act.input(bn3)
+				conv3 = tf.layers.batch_normalization(
+							conv3, 
+							axis=-1,
+							training=is_training )
+				b3act = tf.contrib.keras.layers.LeakyReLU()
+				b3act.input(conv3)
 
-			with tf.variable_scope('block4'):
+			with tf.variable_scope('Block_4'):
 				conv4 = tf.layers.conv2d(
-							inputs=b3_act,
-							filters=self.n_filter[0],
+							inputs=b3act,
+							filters=self.n_filter[2],
 							kernel_size=[3, 3],
-							strides=(2, 2),
+							strides=(1, 1),
 							padding="same",
 							name='conv4' )
-				bn4 = tf.layers.batch_normalization(conv4, training=is_training)
-				b4_act = tf.contrib.keras.layers.LeakyReLU()
-				b4_act.input(bn4)
+				conv4 = tf.layers.batch_normalization(
+							conv4, 
+							axis=-1,
+							training=is_training )
+				b4act = tf.contrib.keras.layers.LeakyReLU()
+				b4act.input(conv4)
 
-			with tf.variable_scope('block5'):
+			with tf.variable_scope('Block_5'):
 				conv5 = tf.layers.conv2d(
-							inputs=b4_act,
-							filters=self.n_filter[0],
+							inputs=b4act,
+							filters=self.n_filter[2],
 							kernel_size=[3, 3],
 							strides=(2, 2),
 							padding="same",
 							name='conv5' )
-				bn5 = tf.layers.batch_normalization(conv5, training=is_training)
-				b5_act = tf.contrib.keras.layers.LeakyReLU()
-				b5_act.input(bn5)
+				conv5 = tf.layers.batch_normalization(
+							conv5, 
+							axis=-1,
+							training=is_training )
+				b5act = tf.contrib.keras.layers.LeakyReLU()
+				b5act.input(conv5)
 
-			with tf.variable_scope('block6'):
+			with tf.variable_scope('Block_6'):
 				conv6 = tf.layers.conv2d(
-							inputs=b5_act,
-							filters=self.n_filter[0],
+							inputs=b5act,
+							filters=self.n_filter[3],
 							kernel_size=[3, 3],
-							strides=(2, 2),
+							strides=(1, 1),
 							padding="same",
 							name='conv6' )
-				bn6 = tf.layers.batch_normalization(conv6, training=is_training)
-				b6_act = tf.contrib.keras.layers.LeakyReLU()
-				b6_act.input(bn6)
+				conv6 = tf.layers.batch_normalization(
+							conv6, 
+							axis=-1,
+							training=is_training )
+				b6act = tf.contrib.keras.layers.LeakyReLU()
+				b6act.input(conv6)
 
-			with tf.variable_scope('block7'):
+			with tf.variable_scope('Block_7'):
 				conv7 = tf.layers.conv2d(
-							inputs=b6_act,
-							filters=self.n_filter[0],
+							inputs=b6act,
+							filters=self.n_filter[3],
 							kernel_size=[3, 3],
 							strides=(2, 2),
 							padding="same",
 							name='conv7' )
-				bn7 = tf.layers.batch_normalization(conv7, training=is_training)
-				b7_act = tf.contrib.keras.layers.LeakyReLU()
-				b7_act.input(bn7)
+				conv7 = tf.layers.batch_normalization(
+							conv7, 
+							axis=-1,
+							training=is_training )
+				b7act = tf.contrib.keras.layers.LeakyReLU()
+				b7act.input(conv7)
 
-			with tf.variable_scope('block8'):
-				#Dense(1024) LeakyRelu Dense(1) sigmoid
+			with tf.variable_scope('fully_connected'):
+				fc1 = tf.contrib.layers.fully_connected(
+					  inputs=b7act,
+					  num_outputs=1024 )
+				act = tf.contrib.keras.layers.LeakyReLU()
+				act.input(fc1)
 
+				fc2 = tf.contrib.layers.fully_connected(
+					  inputs=act,
+					  num_outputs=1 )
+				fc2 = tf.sigmoid(x=fc2, name='output_actfcn')
 
-
+		return fc2
 
 	def inference_losses(self, inputs, imitation, true_output, fake_output):
 		def inference_content_loss(input_x, imitation):
