@@ -47,8 +47,7 @@ def train():
 
 	with tf.Session() as sess:
 		#sess = tf.Session(config=config)
-		writer = tf.summary.FileWriter('board/', graph=sess.graph)
-		init = tf.global_variables_initializer()
+		#writer = tf.summary.FileWriter('board/', graph=sess.graph)
 		sess.run(init)
 		coord = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -64,6 +63,7 @@ def train():
 			saver = tf.train.Saver()
 			saver.restore(sess, "path to chk file")
 
+		# Train SRGAN
 		for itr in range(max_iter)
 			sess.run(, feed_dict={input_x: batch_img, is_training: True})
 
