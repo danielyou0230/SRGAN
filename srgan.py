@@ -768,6 +768,11 @@ class srgan:
 			return tf.reduce_mean(content_loss)
 
 		def inference_adversarial_loss(real_output, fake_output):
+			alpha = 1e-3
+			g_loss = -tf.reduce_sum(tf.log(fake_output))
+			return g_loss*alpha
+
+		def inference_adversarial_loss_l(real_output, fake_output):
 			alpha = 1e-5
 			g_loss = tf.reduce_mean(
 				tf.nn.l2_loss(fake_output - tf.ones_like(fake_output)))
