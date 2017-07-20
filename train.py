@@ -20,6 +20,21 @@ def train():
 
 	model = srgan(input_x=input_x, is_training=is_training)
 
+	#
+	global_step = tf.Variable(0, name='global_step', trainable=False) 
+	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+	g_optimizer = optimizer.minimize(
+					loss=model.g_loss,
+					global_step=global_step,
+					var_list=model.g_variables,
+					name='g_optimizer' )
+
+	d_optimizer = optimizer.minimize(
+					loss=model.d_loss,
+					global_step=global_step,
+					var_list=model.d_variables,
+					name='g_optimizer' )
+	
 	# Generate tfrecord file name
 	tfr = []
 
@@ -64,7 +79,7 @@ def train():
 			saver.restore(sess, "path to chk file")
 
 		# Train SRGAN
-		for itr in range(max_iter)
+		for progress in range(max_iter)
 			sess.run(, feed_dict={input_x: batch_img, is_training: True})
 
 		# Validation

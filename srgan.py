@@ -596,7 +596,10 @@ class srgan:
 								kernel_size=[9, 9],
 								padding="SAME",
 								name='conv' )
-
+		
+		self.g_variables = tf.get_collection(
+								tf.GraphKeys.TRAINABLE_VARIABLES, 
+								scope='generator' )
 		return conv
 
 	def discriminator(self, input_x, is_training, reuse=False)
@@ -730,6 +733,9 @@ class srgan:
 					  num_outputs=1 )
 				fc2 = tf.sigmoid(x=fc2, name='output_actfcn')
 
+		self.g_variables = tf.get_collection(
+								tf.GraphKeys.TRAINABLE_VARIABLES, 
+								scope='discriminator' )
 		return fc2
 
 	def downscale(self, input_x):
