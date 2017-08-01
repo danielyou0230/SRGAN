@@ -1,10 +1,28 @@
 import tensorflow as tf
-import vgg19 as vgg
 import argparse
+from vgg19 import vgg19
 
-def run_model(n_class, is_training):
+def run_model(args):
 	# Define inputs and other necessary parameters
+	learning_rate = 0.001
+	max_epoch = 100
+	batch_size = 50
+	input_x = tf.placeholder(tf.float32, 
+							 [None, image_size, image_size, depth], 
+							 name='input' )
+	target  = tf.placeholder(tf.int32, [None, args.n_class], name='target')
+
+	# Initialize vgg
+	model = vgg19(input_x, target, args.n_class, args.is_training)
+	prediction = model.pred
+	phi = model.phi
+	loss  = model.loss
 	
+	#
+	optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(loss)
+
+	# Fetch data
+	batch_img, batch_tar = fetch()
 	# TensorBoard
 	#merged = tf.summary.merge_all()
 	
@@ -20,9 +38,13 @@ def run_model(n_class, is_training):
 		coord = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-		vgg = vgg.vgg19(input_x, target, args.n_class, args.is_training)
-		vgg.build_model()
-
+		if args.is_training:
+			for _ in range(max_epoch):
+				for itr_batch in range():
+					sess.run(optimizer, feed_dict={input_x: batch_img, target: batch_tar})
+		else:
+			#
+			print "Restoring VGG19 model..."
 		# Stop queue
 		coord.request_stop()
 		coord.join(threads)
@@ -35,4 +57,4 @@ if __name__ == "__main__":
 						help="Indicating mode.")
 	
 	args = parser.parse_args()
-	run_model(args.is_training, args.n_class)
+	run_model(args)
