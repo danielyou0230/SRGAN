@@ -2,11 +2,13 @@ import tensorflow as tf
 import argparse
 from vgg19 import vgg19
 
+depth = 3
 def run_model(args):
 	# Define inputs and other necessary parameters
 	learning_rate = 0.001
 	max_epoch = 100
 	batch_size = 50
+	image_size = 100
 	input_x = tf.placeholder(tf.float32, 
 							 [None, image_size, image_size, depth], 
 							 name='input' )
@@ -17,12 +19,12 @@ def run_model(args):
 	prediction = model.pred
 	phi = model.phi
 	loss  = model.loss
-	
+
 	#
 	optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(loss)
 
 	# Fetch data
-	batch_img, batch_tar = fetch()
+	#batch_img, batch_tar = fetch()
 	# TensorBoard
 	#merged = tf.summary.merge_all()
 	
@@ -42,6 +44,10 @@ def run_model(args):
 			for _ in range(max_epoch):
 				for itr_batch in range():
 					sess.run(optimizer, feed_dict={input_x: batch_img, target: batch_tar})
+			
+			# Save model
+			save_ckpt = saver.save(sess, "model.ckpt")
+			print "Model saved in file: {:s}".format(save_ckpt)
 		else:
 			#
 			print "Restoring VGG19 model..."
