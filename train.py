@@ -16,9 +16,33 @@ def train():
 	input_x = tf.placeholder(tf.float32, 
 							 [None, image_size, image_size, depth], 
 							 name='input' )
+
+	
 	is_training = tf.placeholder(tf.bool, [])
 
-	model = srgan(input_x=input_x, is_training=is_training)
+	#model = srgan(input_x=input_x, is_training=is_training)
+	
+	#define 
+	net_g = SRGAN_g(input_x=input_x, is_train=True, reuse=False)
+	net_d, logits_real = SRGAN_d(t_target_image, is_train=True, reuse=False)
+	_,logits_fake = SRGAN_d(net_g.outputs, is_train=True, reuse=True)
+
+	#resize
+
+	#define loss
+	d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
+	d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake), name='d2')
+	d_loss = d_loss1 + d_loss2
+
+	g_gan_loss = 1e-3 * tl.cost.sigmoid_cross_entropy(logits_fake, tf.ones_like(logits_fake), name='g')
+	mse_loss = tl.cost.mean_squared_error(net_g.outputs , t_target_image, is_mean=True)
+	vgg_loss = 2e-6 * tl.cost.mean_squared_error(vgg_predict_emb.outputs, vgg_target_emb.outputs, is_mean=True)
+
+	g_loss = mse_loss + vgg_loss + g_gan_loss
+
+	g_vars = tl.layers.get_variables_with_name('SRGAN_g', True, True)
+	d_vars = tl.layers.get_variables_with_name('SRGAN_d', True, True)
+
 
 	#
 	global_step = tf.Variable(0, name='global_step', trainable=False) 
